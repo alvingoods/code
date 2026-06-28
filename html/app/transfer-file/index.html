@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub File Transfer - Advanced Alerts</title>
+    <style>
+        :root {
+            --primary: #228be6; --secondary: #7950f2; --success: #40c057;
+            --warning: #f08c00; --danger: #e03131; --cyan: #15aabf; --gray: #868e96;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; padding: 20px; display: flex; justify-content: center;
+            background-color: #f1f3f5;
+        }
+
+        .container {
+            background: white; padding: 30px; border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); max-width: 600px; width: 100%;
+        }
+
+        /* Tab System */
+        .tab-menu {
+            display: flex; gap: 8px; margin-bottom: 25px;
+            background: #f8f9fa; padding: 6px; border-radius: 12px;
+        }
+        .tab-btn {
+            flex: 1; padding: 12px; border: none; background: none;
+            cursor: pointer; font-weight: bold; color: var(--gray);
+            border-radius: 8px; transition: 0.3s;
+        }
+        .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+        /* Section Headers */
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        h3 { color: #333; margin: 0; font-size: 1.1rem; }
+        
+        .btn-toggle {
+            width: auto !important; padding: 5px 15px; font-size: 11px; border-radius: 20px;
+            background: #e9ecef; color: #495057; border: 1px solid #dee2e6;
+            cursor: pointer; font-weight: bold; transition: 0.2s;
+        }
+        .btn-toggle.active { background: var(--warning); color: white; border-color: var(--warning); }
+
+        /* Alerts */
+        .alert {
+            font-weight: 600; margin: 15px 0; padding: 12px;
+            border-radius: 10px; font-size: 13px; text-align: center;
+            border: 1px solid transparent; transition: 0.3s; line-height: 1.4;
+        }
+        .status-default { background-color: #f8f9fa; color: #6c757d; border-color: #dee2e6; }
+        .status-error { background-color: #fff5f5; color: var(--danger); border-color: #ffc9c9; }
+        .status-warning { background-color: #fff9db; color: var(--warning); border-color: #ffe066; }
+        .status-success { background-color: #f4fce3; color: #2f9e44; border-color: #d8f5a2; }
+        .status-process { background-color: #e7f5ff; color: var(--primary); border-color: #a5d8ff; }
+
+        .section { border: 1px solid #eef0f2; padding: 20px; border-radius: 14px; margin-bottom: 20px; }
+        .field-group { margin-bottom: 15px; }
+        label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 6px; color: #495057; }
+        
+        input, select, textarea {
+            width: 100%; padding: 12px; border-radius: 8px;
+            border: 1px solid #ced4da; box-sizing: border-box; font-size: 14px;
+        }
+        .readonly-input { background-color: #f1f3f5; cursor: default; }
+
+        button { 
+            width: 100%; color: white; border: none; padding: 12px; 
+            border-radius: 8px; cursor: pointer; font-size: 14px; 
+            font-weight: bold; transition: 0.2s; 
+        }
+        button:disabled { background-color: #ced4da !important; cursor: not-allowed; }
+        
+        .btn-blue { background-color: var(--primary); }
+        .btn-green { background-color: var(--success); }
+        .btn-purple { background-color: var(--secondary); }
+        .btn-orange { background-color: #fd7e14; }
+        .btn-cyan { background-color: var(--cyan); }
+
+        .hidden { display: none; }
+        .footer-note { font-size: 11px; color: #adb5bd; text-align: center; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="tab-menu">
+        <button id="tabKirimBtn" class="tab-btn active" onclick="switchTab('kirim')">Kirim</button>
+        <button id="tabTerimaBtn" class="tab-btn" onclick="switchTab('terima')">Terima</button>
+    </div>
+
+    <!-- 1. KONFIGURASI -->
+    <div class="section">
+        <h3>1. Konfigurasi Repo</h3>
+        <input type="file" id="jsonFileInput" style="margin-top:10px" accept=".json">
+        <div id="configAlert" class="alert status-default">Silakan unggah file JSON konfigurasi Anda.</div>
+        <div class="button-group" style="display:flex; gap:10px">
+            <button id="btnCheckRepo" class="btn-blue" disabled>Cek Repo</button>
+            <button id="btnCreateRepo" class="btn-green" disabled>Tambah Repo</button>
+        </div>
+    </div>
+
+    <!-- TAB KIRIM -->
+    <div id="tabKirim" class="tab-content">
+        <div id="uploadSection" class="section hidden">
+            <div class="section-header">
+                <h3>2. Unggah File</h3>
+                <button id="btnToggleUpload" class="btn-toggle" onclick="toggleUploadSection()">Lewati</button>
+            </div>
+            
+            <div id="uploadContent">
+                <div class="field-group">
+                    <label>Pilih File</label>
+                    <input type="file" id="targetFile">
+                </div>
+                <div class="field-group">
+                    <label>Kategori Folder</label>
+                    <input type="text" id="fileCategory" class="readonly-input" readonly placeholder="Otomatis...">
+                </div>
+                <div id="uploadAlert" class="alert status-default">Menunggu file dipilih...</div>
+                <button id="btnUpload" class="btn-purple" disabled>Mulai Unggah</button>
+            </div>
+        </div>
+
+        <div id="codeSection" class="section hidden">
+            <h3>3. Tambahkan Kode</h3>
+            <div class="field-group">
+                <label id="labelTarget">Tujuan File (Auto-fill)</label>
+                <input type="text" id="codeTarget" class="readonly-input" readonly placeholder="images/file.png">
+            </div>
+            <div class="field-group">
+                <label>Kode Unik Kiriman</label>
+                <input type="text" id="codeInput" placeholder="Contoh: 1234">
+            </div>
+            <div id="codeAlert" class="alert status-default">Masukkan kode untuk mendaftarkan file ke database.</div>
+            <button id="btnSubmitCode" class="btn-orange">Simpan Kode</button>
+        </div>
+    </div>
+
+    <!-- TAB TERIMA -->
+    <div id="tabTerima" class="tab-content hidden">
+        <div id="downloadSection" class="section hidden">
+            <h3>2. Unduh File</h3>
+            <div class="field-group">
+                <label>Masukkan Kode</label>
+                <input type="text" id="downloadCode" placeholder="Masukkan kode kiriman">
+            </div>
+            <div id="downloadAlert" class="alert status-default">Sistem akan mencari file berdasarkan kode unik.</div>
+            <button id="btnDownload" class="btn-cyan">Unduh File Sekarang</button>
+        </div>
+    </div>
+
+    <div class="footer-note">Limit Unggah GitHub API: 25MB via Browser.</div>
+</div>
+
+<script>
+    let userData = { username: "", token: "" };
+    const repoName = "files";
+    let lastUploadedPath = "";
+
+    const extensionMap = {
+        images: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'],
+        videos: ['mp4', 'mkv', 'avi', 'mov', 'webm'],
+        audio: ['mp3', 'wav', 'flac', 'ogg'],
+        documents: ['pdf', 'doc', 'docx', 'xls', 'xlsx'],
+        text: ['txt', 'md', 'html', 'css', 'js', 'json'],
+        archives: ['zip', 'rar', '7z', 'tar']
+    };
+
+    const configAlert = document.getElementById('configAlert'), uploadAlert = document.getElementById('uploadAlert'),
+          codeAlert = document.getElementById('codeAlert'), downloadAlert = document.getElementById('downloadAlert'),
+          btnUpload = document.getElementById('btnUpload'), btnSubmitCode = document.getElementById('btnSubmitCode'),
+          codeSection = document.getElementById('codeSection'), uploadContent = document.getElementById('uploadContent'),
+          btnToggleUpload = document.getElementById('btnToggleUpload'), codeTarget = document.getElementById('codeTarget');
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('hidden');
+        document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Btn').classList.add('active');
+    }
+
+    function toggleUploadSection() {
+        const labelT = document.getElementById('labelTarget');
+        if (uploadContent.classList.contains('hidden')) {
+            uploadContent.classList.remove('hidden');
+            btnToggleUpload.textContent = "Lewati";
+            btnToggleUpload.classList.remove('active');
+            if (lastUploadedPath) { codeSection.classList.remove('hidden'); codeTarget.value = lastUploadedPath; }
+            else { codeSection.classList.add('hidden'); }
+            codeTarget.classList.add('readonly-input');
+            codeTarget.readOnly = true;
+            labelT.textContent = "Tujuan File (Auto-fill)";
+        } else {
+            uploadContent.classList.add('hidden');
+            btnToggleUpload.textContent = "Gunakan";
+            btnToggleUpload.classList.add('active');
+            codeSection.classList.remove('hidden');
+            codeTarget.classList.remove('readonly-input');
+            codeTarget.readOnly = false;
+            labelT.textContent = "Tujuan File (Ketik Manual)";
+        }
+    }
+
+    // 1. CONFIGURATION LOGIC
+    document.getElementById('jsonFileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const json = JSON.parse(ev.target.result);
+                    if (!json.username || !json.token) throw new Error("Format salah.");
+                    userData = { username: json.username, token: json.token };
+                    document.getElementById('btnCheckRepo').disabled = false;
+                    updateStatus(configAlert, "Konfigurasi terbaca! Silakan klik 'Cek Repo'.", "default");
+                } catch (err) { updateStatus(configAlert, "Gagal: Format JSON tidak valid atau username/token hilang.", "error"); }
+            };
+            reader.readAsText(file);
+        }
+    });
+
+    document.getElementById('btnCheckRepo').addEventListener('click', async () => {
+        updateStatus(configAlert, "Menghubungkan ke GitHub API...", "process");
+        try {
+            const res = await fetch(`https://api.github.com/repos/${userData.username}/${repoName}`, {
+                headers: { 'Authorization': `token ${userData.token}` }
+            });
+            if (res.status === 200) {
+                const data = await res.json();
+                if (data.private) {
+                    updateStatus(configAlert, "Sukses: Repositori 'files' ditemukan dan bersifat Private. Silakan lanjut ke tahap 2.", "success");
+                    document.getElementById('uploadSection').classList.remove('hidden');
+                    document.getElementById('downloadSection').classList.remove('hidden');
+                } else {
+                    updateStatus(configAlert, "Peringatan: Repositori 'files' ditemukan tapi bersifat Publik. Sangat disarankan mengubahnya ke Private.", "warning");
+                    const btnC = document.getElementById('btnCreateRepo'); btnC.textContent = "Ubah ke Private"; btnC.classList.add("status-warning"); btnC.disabled = false;
+                }
+            } else if (res.status === 401) {
+                updateStatus(configAlert, "Gagal: Token GitHub tidak valid atau sudah kedaluwarsa.", "error");
+            } else {
+                updateStatus(configAlert, "Repositori 'files' tidak ditemukan di akun Anda.", "error");
+                document.getElementById('btnCreateRepo').disabled = false;
+            }
+        } catch (e) { updateStatus(configAlert, "Kesalahan Jaringan: Pastikan koneksi internet Anda stabil.", "error"); }
+    });
+
+    // 2. UPLOAD LOGIC
+    document.getElementById('targetFile').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const ext = file.name.split('.').pop().toLowerCase();
+        let cat = 'others';
+        for (const [k, v] of Object.entries(extensionMap)) if (v.includes(ext)) cat = k;
+        document.getElementById('fileCategory').value = cat;
+        const path = `${cat}/${file.name.replace(/\s+/g, '_')}`;
+
+        if (file.size > 25 * 1024 * 1024) {
+            updateStatus(uploadAlert, "Peringatan: File > 25MB mungkin gagal diunggah karena batasan GitHub API REST via browser.", "warning");
+        } else {
+            updateStatus(uploadAlert, "Memeriksa ketersediaan nama file di repositori...", "process");
+        }
+
+        try {
+            const check = await fetch(`https://api.github.com/repos/${userData.username}/${repoName}/contents/${path}`, {
+                headers: { 'Authorization': `token ${userData.token}` }
+            });
+            if (check.ok) {
+                btnUpload.textContent = "Ganti Nama (Acak)";
+                updateStatus(uploadAlert, "Nama file sudah digunakan. Klik tombol untuk mengunggah dengan nama unik (acak).", "warning");
+            } else {
+                btnUpload.textContent = "Mulai Unggah";
+                updateStatus(uploadAlert, "Nama file tersedia. Siap untuk diunggah.", "default");
+            }
+            btnUpload.disabled = false;
+        } catch (e) { updateStatus(uploadAlert, "Gagal memverifikasi nama file.", "error"); }
+    });
+
+    btnUpload.addEventListener('click', async () => {
+        const file = document.getElementById('targetFile').files[0];
+        let fileName = file.name.replace(/\s+/g, '_');
+        const cat = document.getElementById('fileCategory').value;
+        if (btnUpload.textContent === "Ganti Nama (Acak)") fileName = Math.random().toString(36).substring(7) + "_" + fileName;
+        const path = `${cat}/${fileName}`;
+
+        updateStatus(uploadAlert, `Sedang mengunggah: ${fileName}... Jangan tutup halaman.`, "process");
+        btnUpload.disabled = true;
+
+        const reader = new FileReader();
+        reader.onload = async () => {
+            const content = reader.result.split(',')[1];
+            try {
+                const res = await fetch(`https://api.github.com/repos/${userData.username}/${repoName}/contents/${path}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `token ${userData.token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: `Upload via System: ${fileName}`, content })
+                });
+                if (res.ok) {
+                    updateStatus(uploadAlert, "Berhasil diunggah! Silakan lanjut ke tahap 3 untuk pendaftaran kode.", "success");
+                    lastUploadedPath = path; codeTarget.value = path; codeSection.classList.remove('hidden');
+                } else {
+                    const errData = await res.json();
+                    updateStatus(uploadAlert, `Gagal Unggah: ${errData.message || 'Cek limit ukuran file.'}`, "error");
+                    btnUpload.disabled = false;
+                }
+            } catch (e) { updateStatus(uploadAlert, "Kesalahan saat mengirim data ke GitHub.", "error"); btnUpload.disabled = false; }
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // 3. CODE LOGIC
+    document.getElementById('codeInput').addEventListener('input', async () => {
+        const code = document.getElementById('codeInput').value;
+        if (!code) return;
+        try {
+            const res = await fetch(`https://api.github.com/repos/${userData.username}/${repoName}/contents/direction.json`, {
+                headers: { 'Authorization': `token ${userData.token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const list = JSON.parse(atob(data.content));
+                if (list.find(i => i.code === code)) {
+                    btnSubmitCode.textContent = "Timpa Kode";
+                    updateStatus(codeAlert, "Kode sudah terdaftar. Klik 'Timpa' jika ingin mengalihkan kode ini ke file baru.", "warning");
+                } else {
+                    btnSubmitCode.textContent = "Simpan Kode";
+                    updateStatus(codeAlert, "Kode tersedia dan siap disimpan.", "default");
+                }
+            }
+        } catch (e) {}
+    });
+
+    btnSubmitCode.addEventListener('click', async () => {
+        const target = codeTarget.value;
+        const code = document.getElementById('codeInput').value;
+        if (!target || !code) return updateStatus(codeAlert, "Gagal: Target file dan Kode wajib diisi.", "error");
+
+        updateStatus(codeAlert, "Memperbarui database direction.json...", "process");
+        btnSubmitCode.disabled = true;
+        const url = `https://api.github.com/repos/${userData.username}/${repoName}/contents/direction.json`;
+        let list = [], sha = "";
+
+        try {
+            const check = await fetch(url, { headers: { 'Authorization': `token ${userData.token}` } });
+            if (check.ok) { const d = await check.json(); sha = d.sha; list = JSON.parse(atob(d.content)); }
+            list = list.filter(i => i.code !== code); list.push({ code, target });
+
+            const res = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${userData.token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: "Update DB directions", content: btoa(JSON.stringify(list, null, 2)), sha })
+            });
+            if (res.ok) updateStatus(codeAlert, "Sukses: Data telah didaftarkan. Anda bisa membagikan kode tersebut.", "success");
+            else updateStatus(codeAlert, "Gagal menyimpan database.", "error");
+        } catch (e) { updateStatus(codeAlert, "Kesalahan sistem saat menulis database.", "error"); }
+        finally { btnSubmitCode.disabled = false; }
+    });
+
+    // 4. DOWNLOAD LOGIC
+    document.getElementById('btnDownload').addEventListener('click', async () => {
+        const code = document.getElementById('downloadCode').value;
+        if (!code) return updateStatus(downloadAlert, "Gagal: Kode wajib diisi untuk mencari file.", "error");
+
+        updateStatus(downloadAlert, "Mencari data kode di database...", "process");
+        try {
+            const res = await fetch(`https://api.github.com/repos/${userData.username}/${repoName}/contents/direction.json`, {
+                headers: { 'Authorization': `token ${userData.token}` }
+            });
+            if (res.ok) {
+                const d = await res.json();
+                const found = JSON.parse(atob(d.content)).find(i => i.code === code);
+                if (found) {
+                    updateStatus(downloadAlert, `Kode cocok! Sedang mengunduh: ${found.target}...`, "success");
+                    const fRes = await fetch(`https://api.github.com/repos/${userData.username}/${repoName}/contents/${found.target}`, {
+                        headers: { 'Authorization': `token ${userData.token}` }
+                    });
+                    if (fRes.ok) {
+                        const fData = await fRes.json();
+                        const a = document.createElement('a'); a.href = `data:application/octet-stream;base64,${fData.content}`;
+                        a.download = found.target.split('/').pop(); a.click();
+                    } else { updateStatus(downloadAlert, "Gagal: File fisik tidak ditemukan di repositori.", "error"); }
+                } else { updateStatus(downloadAlert, "Gagal: Kode tidak ditemukan dalam database.", "error"); }
+            } else { updateStatus(downloadAlert, "Gagal: Database (direction.json) belum dibuat di repo.", "error"); }
+        } catch (e) { updateStatus(downloadAlert, "Kesalahan saat mengambil data unduhan.", "error"); }
+    });
+
+    function updateStatus(el, text, type) {
+        el.textContent = text;
+        el.className = `alert status-${type}`;
+    }
+</script>
+</body>
+</html>
