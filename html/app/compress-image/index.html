@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kompres Gambar</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 0; padding: 20px;
+      display: flex; justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      max-width: 500px; width: 100%;
+    }
+    h2 { text-align: center; margin-bottom: 20px; color: #333; }
+    label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; }
+    select, input[type="file"], button, input[type="range"] {
+      width: 100%; padding: 12px; margin-bottom: 15px;
+      border-radius: 8px; border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    input[type="range"] { padding: 0; }
+    button, a.download-btn {
+      display: inline-block; text-align: center;
+      background: #007bff; color: #fff;
+      text-decoration: none; border-radius: 8px;
+      padding: 12px 15px; font-weight: bold;
+      transition: 0.3s; border: none; cursor: pointer;
+      width: 100%; margin-top: 10px;
+    }
+    button:hover, a.download-btn:hover { background: #0056b3; }
+    button:disabled { background: #6c757d; cursor: not-allowed; }
+    
+    .preview-container {
+      position: relative;
+      display: none;
+      margin-top: 15px;
+    }
+    #preview {
+      max-width: 100%;
+      border-radius: 8px;
+      display: block;
+    }
+
+    /* 🔥 ikon mata overlay di atas gambar */
+    .eye-container {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 20;
+    }
+    .eye-icon {
+      background: rgba(255,255,255,0.9);
+      color: #333;
+      padding: 8px;
+      border-radius: 50%;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      font-size: 20px;
+      transition: all 0.2s ease;
+    }
+    .eye-icon:hover {
+      background: rgba(255,255,255,1);
+      transform: scale(1.05);
+    }
+    .eye-icon.active {
+      background: #007bff;
+      color: white;
+    }
+
+    /* 🔥 teks informasi di luar gambar */
+    .info-text {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #555;
+      text-align: center;
+      display: none; /* default tersembunyi */
+    }
+
+    #info {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #444;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .loading { display: none; text-align: center; margin: 10px 0; }
+    .loading-spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      width: 30px; height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
+    .note { margin-top: -5px; margin-bottom: 15px; font-size: 13px; color: #666; text-align: center; }
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      .container { padding: 15px; }
+      select, input[type="file"], button, input[type="range"] { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Kompres Gambar</h2>
+    
+    <input type="file" id="upload" accept="image/*">
+    <p class="note">⚠️ Gambar tidak akan disimpan di server dan hilang saat halaman di-refresh.</p>
+    
+    <div class="loading" id="loading">
+      <div class="loading-spinner"></div>
+      <p>Mengkompres gambar...</p>
+    </div>
+
+    <label for="resolution">Resolusi Maksimal:</label>
+    <select id="resolution">
+      <option value="800">800px (hemat ukuran)</option>
+      <option value="1200" selected>1200px (seimbang)</option>
+      <option value="1600">1600px (lebih jelas)</option>
+    </select>
+
+    <!-- 🔥 Slider kualitas -->
+    <label for="quality">Kualitas: <span id="qualityValue">85%</span></label>
+    <input type="range" id="quality" min="1" max="100" value="85">
+
+    <canvas id="canvas" style="display:none;"></canvas>
+    
+    <div class="preview-container" id="preview-container">
+      <img id="preview" alt="Hasil Kompresi">
+      <div class="eye-container" id="eye-container">
+        <div class="eye-icon" id="eye-icon">👁</div>
+      </div>
+    </div>
+
+    <!-- 🔥 Teks informasi di luar gambar -->
+    <p class="info-text" id="info-text">
+      Tekan dan tahan ikon mata di pojok kanan atas gambar untuk melihat perbandingan.
+    </p>
+    
+    <div id="info"></div>
+    <a id="download" class="download-btn" style="display:none;">Unduh Gambar Terkompres</a>
+  </div>
+
+  <script>
+    const upload = document.getElementById('upload');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const download = document.getElementById('download');
+    const resolutionSelect = document.getElementById('resolution');
+    const qualitySlider = document.getElementById('quality');
+    const qualityValue = document.getElementById('qualityValue');
+    const preview = document.getElementById('preview');
+    const previewContainer = document.getElementById('preview-container');
+    const eyeIcon = document.getElementById('eye-icon');
+    const info = document.getElementById('info');
+    const loading = document.getElementById('loading');
+    const infoText = document.getElementById('info-text');
+    
+    let currentImage = null;
+    let originalFile = null;
+    let originalDataURL = null;
+    let compressedDataURL = null;
+    let holdTimer = null;
+
+    function formatDate() {
+      const now = new Date();
+      const pad = (n) => (n < 10 ? '0' + n : n);
+      const hariIndo = ["MINGGU","SENIN","SELASA","RABU","KAMIS","JUMAT","SABTU"];
+      const hari = hariIndo[now.getDay()];
+      return `IMG_${pad(now.getDate())}${pad(now.getMonth()+1)}${now.getFullYear()}_${hari}${pad(now.getHours())}${pad(now.getMinutes())}WIB.jpg`;
+    }
+
+    function compressImage() {
+      if (!currentImage || !originalFile) return;
+      loading.style.display = 'block';
+      
+      setTimeout(() => {
+        const maxWidth = parseInt(resolutionSelect.value);
+        const quality = parseInt(qualitySlider.value) / 100;
+
+        const scale = Math.min(maxWidth / currentImage.width, 1);
+        canvas.width = currentImage.width * scale;
+        canvas.height = currentImage.height * scale;
+
+        ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
+        compressedDataURL = canvas.toDataURL("image/jpeg", quality);
+
+        preview.src = compressedDataURL;
+        previewContainer.style.display = "block";
+
+        // 🔥 tampilkan teks informasi setelah ada gambar
+        infoText.style.display = "block";
+
+        const originalSize = (originalFile.size / 1024).toFixed(2);
+        const compressedSize = (compressedDataURL.length * (3/4) / 1024).toFixed(2);
+
+        info.innerHTML = `Ukuran asli: <b>${originalSize} KB</b><br>
+                          Setelah kompresi: <b>${compressedSize} KB</b><br>
+                          Pengurangan: <b>${(100 - (compressedSize/originalSize * 100)).toFixed(2)}%</b>`;
+
+        download.href = compressedDataURL;
+        download.download = formatDate();
+        download.style.display = "inline-block";
+        download.textContent = "⬇ Unduh Gambar Terkompres";
+        
+        loading.style.display = 'none';
+      }, 100);
+    }
+
+    upload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      originalFile = file;
+
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+
+      reader.onload = (event) => {
+        originalDataURL = event.target.result;
+        const img = new Image();
+        img.src = originalDataURL;
+        img.onload = () => {
+          currentImage = img;
+          compressImage();
+        };
+      };
+    });
+
+    resolutionSelect.addEventListener('change', compressImage);
+
+    // 🔥 Slider event (real-time)
+    qualitySlider.addEventListener('input', () => {
+      qualityValue.textContent = qualitySlider.value + "%";
+      compressImage();
+    });
+
+    // 👁 Bandingkan gambar asli & kompresi
+    function showOriginal() {
+      if (originalDataURL) {
+        preview.src = originalDataURL;
+        eyeIcon.classList.add('active');
+      }
+    }
+    function showCompressed() {
+      if (compressedDataURL) {
+        preview.src = compressedDataURL;
+        eyeIcon.classList.remove('active');
+      }
+    }
+
+    // cegah menu bawaan browser saat hold/click pada ikon
+    eyeIcon.addEventListener("contextmenu", (e) => e.preventDefault());
+    eyeIcon.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      holdTimer = setTimeout(showOriginal, 300); 
+    });
+    eyeIcon.addEventListener("pointerup", () => {
+      clearTimeout(holdTimer);
+      showCompressed();
+    });
+    eyeIcon.addEventListener("pointerleave", () => {
+      clearTimeout(holdTimer);
+      showCompressed();
+    });
+  </script>
+</body>
+</html>
